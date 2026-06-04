@@ -1,0 +1,398 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Instant Messaging Prototype</title>
+    <style>
+        :root {
+            --primary-color: #0077ff;
+            --bg-color: #f3f4f6;
+            --chat-bg: #ffffff;
+            --text-dark: #1f2937;
+            --ai-hint-color: #4f46e5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0077ff, #4f46e5);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+        }
+
+        header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        /* Split Screen Container */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 2px;
+            background-color: #d1d5db;
+        }
+
+        /* Individual Chat Client */
+        .chat-client {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            height: 100%;
+            position: relative;
+        }
+
+        .client-header {
+            background-color: #f9fafb;
+            padding: 12px 20px;
+            font-weight: bold;
+            color: var(--text-dark);
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Chat Feed */
+        .message-feed {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #f9fafb;
+        }
+
+        /* Message Bubbles */
+        .msg {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Styles depending on who sent it relative to the specific view */
+        .msg.self {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.other {
+            align-self: flex-start;
+            background-color: #e5e7eb;
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* AI Suggestions Area */
+        .ai-suggestions-box {
+            padding: 10px 15px;
+            background-color: #f5f3ff;
+            border-top: 1px solid #e5e7eb;
+            min-height: 55px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ai-status {
+            font-size: 0.75rem;
+            color: var(--ai-hint-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .suggestions-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 3px;
+        }
+
+        .suggestions-container::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .suggestions-container::-webkit-scrollbar-thumb {
+            background: #ddd6fe;
+            border-radius: 10px;
+        }
+
+        .suggestion-btn {
+            background-color: white;
+            border: 1px solid #c7d2fe;
+            color: #4338ca;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-btn:hover {
+            background-color: #eef2ff;
+            border-color: var(--ai-hint-color);
+        }
+
+        /* Input Controls */
+        .input-area {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            background-color: #f3f4f6;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 20px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .input-area input:focus {
+            border-color: var(--primary-color);
+            background-color: white;
+        }
+
+        .input-area button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 22px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover {
+            background-color: #0062d6;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>AI-Powered Instant Messaging Platform</h1>
+        <p>Shared Server Workspace: Send messages on either screen to watch real-time context suggestions update.</p>
+    </header>
+
+    <div class="workspace">
+        
+        <div class="chat-client" id="client-A">
+            <div class="client-header">
+                <span>Chatting with Person B</span>
+                <span class="user-tag">User A</span>
+            </div>
+            <div class="message-feed" id="feed-A"></div>
+            <div class="ai-suggestions-box">
+                <div class="ai-status" id="ai-status-A">✨ Meta AI: Awaiting incoming message...</div>
+                <div class="suggestions-container" id="suggestions-A"></div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="input-A" placeholder="Type a message..." onkeypress="handleKeyPress(event, 'A')">
+                <button onclick="sendMessage('A')">Send</button>
+            </div>
+        </div>
+
+        <div class="chat-client" id="client-B">
+            <div class="client-header">
+                <span>Chatting with Person A</span>
+                <span class="user-tag">User B</span>
+            </div>
+            <div class="message-feed" id="feed-B"></div>
+            <div class="ai-suggestions-box">
+                <div class="ai-status" id="ai-status-B">✨ Meta AI: Awaiting incoming message...</div>
+                <div class="suggestions-container" id="suggestions-B"></div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="input-B" placeholder="Type a message..." onkeypress="handleKeyPress(event, 'B')">
+                <button onclick="sendMessage('B')">Send</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Shared Local Memory State 
+        const chatHistory = [];
+
+        // Neutral Rule-Based NLP Sentiment Engine
+        function generateAISuggestions(text) {
+            const lowerText = text.toLowerCase();
+            
+            // Work / Collaboration Context
+            if (lowerText.includes('work') || lowerText.includes('project') || lowerText.includes('task') || lowerText.includes('update') || lowerText.includes('file')) {
+                return {
+                    sentiment: "Professional / Actionable 💼",
+                    suggestions: ["Got it. I'll take a look right now.", "Let's schedule a brief call to discuss.", "Perfect, thanks for updating me!"]
+                };
+            }
+            // Meetup / Planning Context
+            if (lowerText.includes('meet') || lowerText.includes('call') || lowerText.includes('schedule') || lowerText.includes('time') || lowerText.includes('available')) {
+                return {
+                    sentiment: "Scheduling / Logistics 📅",
+                    suggestions: ["Does 3:00 PM work for you?", "Sure, send over a calendar invite.", "I'm open anytime after lunch."]
+                };
+            }
+            // Problem / Issue / Help Context
+            if (lowerText.includes('error') || lowerText.includes('issue') || lowerText.includes('stuck') || lowerText.includes('help') || lowerText.includes('broken')) {
+                return {
+                    sentiment: "Supportive / Problem Solving 🛠️",
+                    suggestions: ["What's the exact issue you're seeing?", "Let me help you troubleshoot that.", "Can you share a screenshot of it?"]
+                };
+            }
+            // Standard Greetings
+            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey') || lowerText.includes('morning')) {
+                return {
+                    sentiment: "General Greeting 👋",
+                    suggestions: ["Hi! How's your day going?", "Hey there! What's up?", "Hello! Hope you're doing well."]
+                };
+            }
+            // General Agreement / Positive
+            if (lowerText.includes('good') || lowerText.includes('great') || lowerText.includes('awesome') || lowerText.includes('thanks') || lowerText.includes('thank you')) {
+                return {
+                    sentiment: "Positive / Polite 👍",
+                    suggestions: ["Awesome! Glad to hear.", "You're very welcome!", "Sounds good to me."]
+                };
+            }
+            // Default smart fallback
+            return {
+                sentiment: "General Inquiry 💬",
+                suggestions: ["Understood. Tell me more.", "Interesting, let's look into it.", "Sounds reasonable."]
+            };
+        }
+
+        function handleKeyPress(event, user) {
+            if (event.key === 'Enter') {
+                sendMessage(user);
+            }
+        }
+
+        function sendMessage(sender) {
+            const inputElement = document.getElementById(`input-${sender}`);
+            const text = inputElement.value.trim();
+            
+            if (text === "") return;
+
+            const newMessage = {
+                sender: sender, 
+                text: text,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            chatHistory.push(newMessage);
+
+            inputElement.value = "";
+            updateChatUI(newMessage);
+        }
+
+        function updateChatUI(latestMessage) {
+            const feedA = document.getElementById('feed-A');
+            const feedB = document.getElementById('feed-B');
+
+            feedA.innerHTML = "";
+            feedB.innerHTML = "";
+
+            chatHistory.forEach(msg => {
+                // Render view A
+                const bubbleA = document.createElement('div');
+                bubbleA.classList.add('msg', msg.sender === 'A' ? 'self' : 'other');
+                bubbleA.innerText = msg.text;
+                feedA.appendChild(bubbleA);
+
+                // Render view B
+                const bubbleB = document.createElement('div');
+                bubbleB.classList.add('msg', msg.sender === 'B' ? 'self' : 'other');
+                bubbleB.innerText = msg.text;
+                feedB.appendChild(bubbleB);
+            });
+
+            feedA.scrollTop = feedA.scrollHeight;
+            feedB.scrollTop = feedB.scrollHeight;
+
+            processAISuggestions(latestMessage);
+        }
+
+        function processAISuggestions(latestMessage) {
+            const aiData = generateAISuggestions(latestMessage.text);
+            const targetUser = latestMessage.sender === 'A' ? 'B' : 'A';
+            const idleUser = latestMessage.sender;
+
+            const statusLabel = document.getElementById(`ai-status-${targetUser}`);
+            const suggestionsContainer = document.getElementById(`suggestions-${targetUser}`);
+
+            statusLabel.innerHTML = `✨ Meta AI Suggestion [Context: <b>${aiData.sentiment}</b>]:`;
+            suggestionsContainer.innerHTML = ""; 
+
+            aiData.suggestions.forEach(suggestionText => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-btn';
+                btn.innerText = suggestionText;
+                btn.onclick = () => {
+                    document.getElementById(`input-${targetUser}`).value = suggestionText;
+                    sendMessage(targetUser);
+                };
+                suggestionsContainer.appendChild(btn);
+            });
+
+            document.getElementById(`ai-status-${idleUser}`).innerText = `✨ Meta AI: Awaiting response...`;
+            document.getElementById(`suggestions-${idleUser}`).innerHTML = "";
+        }
+
+        // Initialize with casual starter data
+        chatHistory.push({sender: 'A', text: "Hi, let me know when you're ready to review the project code."});
+        chatHistory.push({sender: 'B', text: "Hey! I'm free now. Let's look over it together."});
+        updateChatUI({sender: 'B', text: "Hey! I'm free now. Let's look over it together."});
+    </script>
+</body>
+</html>
+
+```
