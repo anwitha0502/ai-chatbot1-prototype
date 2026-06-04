@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Love Chat Prototype</title>
+    <style>
+        :root {
+            --primary-color: #ff4b72;
+            --bg-color: #f7f9fc;
+            --chat-bg: #ffffff;
+            --text-dark: #333333;
+            --ai-hint-color: #7209b7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #ff4b72, #ff758c);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+        }
+
+        header p {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        /* Split Screen Container */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 2px;
+            background-color: #e0e0e0;
+        }
+
+        /* Individual Chat Client */
+        .chat-client {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            height: 100%;
+            position: relative;
+        }
+
+        .client-header {
+            background-color: #f0f2f5;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Chat Feed */
+        .message-feed {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-image: radial-gradient(#ff4b7205 15%, transparent 15%);
+            background-size: 20px 20px;
+        }
+
+        /* Message Bubbles */
+        .msg {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Styles depending on who sent it relative to the specific view */
+        .msg.self {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.other {
+            align-self: flex-start;
+            background-color: #f1f0f0;
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* AI Suggestions Area */
+        .ai-suggestions-box {
+            padding: 10px 15px;
+            background-color: #f9f6fa;
+            border-top: 1px solid #eee;
+            min-height: 55px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ai-status {
+            font-size: 0.75rem;
+            color: var(--ai-hint-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .suggestions-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 3px;
+        }
+
+        .suggestion-btn {
+            background-color: white;
+            border: 1px solid #dcd1e8;
+            color: #5a189a;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-btn:hover {
+            background-color: #f3e8ff;
+            border-color: var(--ai-hint-color);
+        }
+
+        /* Input Controls */
+        .input-area {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            background-color: #f0f2f5;
+            border-top: 1px solid #ddd;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .input-area input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .input-area button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover {
+            background-color: #e03a5f;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>AI-Powered Love Chat (Shared Server Prototype)</h1>
+        <p>Both screens share the same data stream. Type on either side to simulate User A and User B interacting!</p>
+    </header>
+
+    <div class="workspace">
+        
+        <div class="chat-client" id="client-A">
+            <div class="client-header">
+                <span>Chatting with Person B</span>
+                <span class="user-tag">You: Person A</span>
+            </div>
+            <div class="message-feed" id="feed-A">
+                </div>
+            <div class="ai-suggestions-box">
+                <div class="ai-status" id="ai-status-A">✨ Meta AI: Awaiting Person B's message...</div>
+                <div class="suggestions-container" id="suggestions-A"></div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="input-A" placeholder="Type a romantic or casual message..." onkeypress="handleKeyPress(event, 'A')">
+                <button onclick="sendMessage('A')">Send</button>
+            </div>
+        </div>
+
+        <div class="chat-client" id="client-B">
+            <div class="client-header">
+                <span>Chatting with Person A</span>
+                <span class="user-tag">You: Person B</span>
+            </div>
+            <div class="message-feed" id="feed-B">
+                </div>
+            <div class="ai-suggestions-box">
+                <div class="ai-status" id="ai-status-B">✨ Meta AI: Awaiting Person A's message...</div>
+                <div class="suggestions-container" id="suggestions-B"></div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="input-B" placeholder="Type a romantic or casual message..." onkeypress="handleKeyPress(event, 'B')">
+                <button onclick="sendMessage('B')">Send</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Shared Local Data Storage (Simulating Server State)
+        const chatHistory = [];
+
+        // Simple Rule-Based NLP Sentiment Engine to mimic real-time AI Suggestions
+        function generateAISuggestions(text) {
+            const lowerText = text.toLowerCase();
+            
+            // Romantic/Flirty Sentiment
+            if (lowerText.includes('love') || lowerText.includes('miss') || lowerText.includes('cute') || lowerText.includes('beautiful')) {
+                return {
+                    sentiment: "Romantic & Affectionate ❤️",
+                    suggestions: ["I love you more! 😘", "You always know how to make me smile.", "Can't wait to see you! 😍"]
+                };
+            }
+            // Asking out / Date Setup Sentiment
+            if (lowerText.includes('meet') || lowerText.includes('date') || lowerText.includes('dinner') || lowerText.includes('free') || lowerText.includes('hangout')) {
+                return {
+                    sentiment: "Planning / Excitement ✨",
+                    suggestions: ["I'd love that! Where are we going?", "Count me in! What time?", "Sounds perfect, it's a date! 🥂"]
+                };
+            }
+            // Sad / Low Energy Sentiment
+            if (lowerText.includes('sad') || lowerText.includes('tired') || lowerText.includes('bad') || lowerText.includes('sorry') || lowerText.includes('cry')) {
+                return {
+                    sentiment: "Empathetic & Supportive 🫂",
+                    suggestions: ["I'm here for you. Want to talk?", "Sending you the biggest hug right now.", "Don't worry, everything will be fine."]
+                };
+            }
+            // Standard Greetings
+            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+                return {
+                    sentiment: "Warm Greeting 👋",
+                    suggestions: ["Hey beautiful! How is your day?", "Hi there! Was just thinking about you.", "Hey! What are you up to?"]
+                };
+            }
+            // Default Smart fallback
+            return {
+                sentiment: "Casual Chat 💬",
+                suggestions: ["Tell me more! 😊", "Haha totally agree!", "That sounds amazing."]
+            };
+        }
+
+        // Functions to Send Messages
+        function handleKeyPress(event, user) {
+            if (event.key === 'Enter') {
+                sendMessage(user);
+            }
+        }
+
+        function sendMessage(sender) {
+            const inputElement = document.getElementById(`input-${sender}`);
+            const text = inputElement.value.trim();
+            
+            if (text === "") return;
+
+            // Save to shared array
+            const newMessage = {
+                sender: sender, // 'A' or 'B'
+                text: text,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            chatHistory.push(newMessage);
+
+            // Clear input box
+            inputElement.value = "";
+
+            // Refresh UI across both panels
+            updateChatUI(newMessage);
+        }
+
+        // Update UI dynamically for both users
+        function updateChatUI(latestMessage) {
+            const feedA = document.getElementById('feed-A');
+            const feedB = document.getElementById('feed-B');
+
+            // Clear layout for rendering (Simplification for prototype script)
+            feedA.innerHTML = "";
+            feedB.innerHTML = "";
+
+            // Process every message in history for both perspectives
+            chatHistory.forEach(msg => {
+                // For Client A
+                const bubbleA = document.createElement('div');
+                bubbleA.classList.add('msg', msg.sender === 'A' ? 'self' : 'other');
+                bubbleA.innerText = msg.text;
+                feedA.appendChild(bubbleA);
+
+                // For Client B
+                const bubbleB = document.createElement('div');
+                bubbleB.classList.add('msg', msg.sender === 'B' ? 'self' : 'other');
+                bubbleB.innerText = msg.text;
+                feedB.appendChild(bubbleB);
+            });
+
+            // Scroll feeds to bottom
+            feedA.scrollTop = feedA.scrollHeight;
+            feedB.scrollTop = feedB.scrollHeight;
+
+            // Generate AI context-aware suggestions for the RECIPIENT
+            processAISuggestions(latestMessage);
+        }
+
+        function processAISuggestions(latestMessage) {
+            const aiData = generateAISuggestions(latestMessage.text);
+            
+            const targetUser = latestMessage.sender === 'A' ? 'B' : 'A';
+            const idleUser = latestMessage.sender;
+
+            // 1. Update the recipient's AI Suggestions block
+            const statusLabel = document.getElementById(`ai-status-${targetUser}`);
+            const suggestionsContainer = document.getElementById(`suggestions-${targetUser}`);
+
+            statusLabel.innerHTML = `✨ Meta AI Context [Detected: <b>${aiData.sentiment}</b>]:`;
+            suggestionsContainer.innerHTML = ""; // reset previous suggestions
+
+            aiData.suggestions.forEach(suggestionText => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-btn';
+                btn.innerText = suggestionText;
+                // Clicking the suggestion auto-injects and sends it for that user
+                btn.onclick = () => {
+                    document.getElementById(`input-${targetUser}`).value = suggestionText;
+                    sendMessage(targetUser);
+                };
+                suggestionsContainer.appendChild(btn);
+            });
+
+            // 2. Clear out or put idle status on the sender's AI box (since they are waiting now)
+            document.getElementById(`ai-status-${idleUser}`).innerText = `✨ Meta AI: Awaiting response...`;
+            document.getElementById(`suggestions-${idleUser}`).innerHTML = "";
+        }
+
+        // Initialize with default template view data
+        chatHistory.push({sender: 'A', text: "Hey! Look at this clean split-screen prototype."});
+        chatHistory.push({sender: 'B', text: "Wow, it updates instantly! Test out typing below."});
+        updateChatUI({sender: 'B', text: "Wow, it updates instantly! Test out typing below."});
+    </script>
+</body>
+</html>
